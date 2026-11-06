@@ -4,6 +4,8 @@ A key is the hash of the stage's input, so a result exists iff that exact input 
 symbols.json is the one mutable file; add_symbols is its only writer and holds a file lock,
 so parallel scrubs never assign one placeholder twice.
 """
+from __future__ import annotations
+
 import fcntl
 import hashlib
 import json
