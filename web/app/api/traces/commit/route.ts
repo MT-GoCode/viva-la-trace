@@ -10,8 +10,9 @@ export const POST = route(async (req) => {
   const replaces = new Set(b.replaces);
 
   const path = `${m.hash}.json`;
-  if (!must(await bucket.exists(path))) throw new HttpError(400, "trace not uploaded");
-  const { size } = must(await bucket.info(path));
+  const info = await bucket.info(path);
+  if (info.error && "code" in info.error && info.error.code === "NoSuchKey") throw new HttpError(400, "trace not uploaded");
+  const { size } = must(info);
   if (size !== m.bytes) throw new HttpError(400, `uploaded size ${size} != bytes ${m.bytes}`);
 
   must(await db.from("traces").upsert({ ...m, key_id }, { onConflict: "hash", ignoreDuplicates: true }));

@@ -70,8 +70,8 @@ sleep 3
 [[ $(curl -sf "$BASE/api/stats" | jq .turns) == $((TURNS0 + 2)) ]] || fail "stats after supersede"; ok "stats turns = +2 (trace 1 dropped)"
 curl -sf "$BASE/api/feed?tag=e2e" | jq -e --arg a "$H1" --arg b "$H2" 'any(.[]; .hash==$b) and all(.[]; .hash!=$a)' >/dev/null || fail "feed 2"
 ok "feed shows trace 2 only"
-[[ $(curl -s -o /dev/null -w '%{http_code}' "$SUPABASE_URL/storage/v1/object/public/traces/$H1.json") == 400 || \
-   $(curl -s -o /dev/null -w '%{http_code}' "$SUPABASE_URL/storage/v1/object/public/traces/$H1.json") == 404 ]] || fail "object 1 not deleted"
+# Authenticated read bypasses the public CDN cache, which may still serve the deleted object.
+curl -s "${SB[@]}" "$SUPABASE_URL/storage/v1/object/traces/$H1.json" | jq -e '.error=="not_found"' >/dev/null || fail "object 1 not deleted"
 ok "superseded storage object deleted"
 curl -sf "$BASE/api/mine" "${AUTH[@]}" | jq -e --arg a "$H1" --arg b "$H2" \
   'length==2 and .[0].hash==$b and .[0].superseded_by==null and .[1].hash==$a and .[1].superseded_by==$b' >/dev/null || fail "mine"
