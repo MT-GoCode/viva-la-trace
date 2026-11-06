@@ -5,12 +5,14 @@ Secrets come from Yelp detect-secrets, everything else from Microsoft Presidio.
 from __future__ import annotations
 
 import functools
+import os
+import re
+import tempfile
 from pathlib import Path
 
 HOME = str(Path.home())
-# detect-secrets' ad-hoc line scan also reports sub-fragments ("and", "4c") of a real hit;
-# every real credential observed is >= 16 chars, so shorter values are fragments, not secrets.
-MIN_SECRET_LEN = 16
+# detect-secrets may match only a prefix of a credential (e.g. its Stripe rule); replace the whole token.
+TOKEN = re.compile(r"[A-Za-z0-9_\-+/=.:]*")
 
 
 @functools.cache
@@ -34,14 +36,25 @@ def strings(obj) -> list[str]:
 
 
 def secrets(text: str) -> set[str]:
-    from detect_secrets.core.scan import scan_line
+    """Credentials per detect-secrets' file scanner, which applies its entropy limits and filters.
+    The ad-hoc line scanner skips those and flags ordinary words, so it is not used."""
+    from detect_secrets import SecretsCollection
     from detect_secrets.settings import default_settings
 
-    found = set()
-    with default_settings():
-        for line in text.splitlines():
-            found |= {s.secret_value for s in scan_line(line) if s.secret_value and len(s.secret_value) >= MIN_SECRET_LEN}
-    return found
+    with tempfile.NamedTemporaryFile("w", suffix=".sh", delete=False, encoding="utf-8") as f:
+        f.write(text)
+    try:
+        with default_settings():
+            found = SecretsCollection()
+            found.scan_file(f.name)
+            values = {s.secret_value for _, s in found if s.secret_value}
+    finally:
+        os.unlink(f.name)
+    out = set()
+    for v in values:
+        for m in re.finditer(re.escape(v), text):
+            out.add(v + TOKEN.match(text, m.end()).group(0))
+    return out
 
 
 def pii(text: str) -> list[tuple[str, str]]:

@@ -120,6 +120,6 @@ export async function feed(tag: string | null): Promise<FeedItem[]> {
   await connection();
   let q = db.from("traces").select("hash, harness, title, turns, tags, created_at").is("superseded_by", null);
   if (tag) q = q.contains("tags", [tag]);
-  const rows = must(await q.order("created_at", { ascending: false }).limit(50));
+  const rows = must(await q.order("created_at", { ascending: false }));
   return rows.map((r) => ({ ...r, url: bucket.getPublicUrl(`${r.hash}.json`).data.publicUrl }));
 }

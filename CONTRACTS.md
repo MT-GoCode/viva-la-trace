@@ -29,7 +29,7 @@ Routes:
 4. `GET /api/mine` (auth) -> `[{hash, harness, title, turns, tags, created_at, superseded_by}]` newest first, all of this key's rows
 5. `GET /api/stats` -> `{"turns": int, "traces": int, "contributors": int, "by_harness": {"claude_code": int, "codex": int}}`
    counting only rows where superseded_by is null; contributors = distinct key_id.
-6. `GET /api/feed?tag=<optional>` -> newest 50 non-superseded rows `[{hash, harness, title, turns, tags, created_at, url}]`,
+6. `GET /api/feed?tag=<optional>` -> all non-superseded rows, newest first, `[{hash, harness, title, turns, tags, created_at, url}]`,
    `url` = public storage URL of `traces/<hash>.json`.
 
 Storage: Supabase bucket `traces` (public read). Object path `<hash>.json`. Schema: `supabase/schema.sql`.

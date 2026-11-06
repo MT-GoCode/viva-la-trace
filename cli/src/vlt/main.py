@@ -144,7 +144,7 @@ def cmd_login(args):
 
 def cmd_push(args):
     k = key()
-    sessions = [s for s in list_sessions() if (r := record(s)).get("file_hash") and not r.get("excluded")
+    sessions = [s for s in (pick(args.ids, list_sessions()) if args.ids else list_sessions()) if (r := record(s)).get("file_hash") and not r.get("excluded")
                 and r.get("fingerprint") == fingerprint(s) and r["file_hash"] not in r.get("pushed", [])]
     if not sessions:
         console.print("nothing to push")
@@ -168,6 +168,12 @@ def cmd_push(args):
     console.print(f"[bold red]World total: {stats['turns']:,} turns taken back.[/] {SERVER}")
 
 
+def cmd_exclude(args):
+    for s in pick(args.ids, list_sessions()):
+        store.put("session", s.id, {**record(s), "excluded": args.reason})
+        console.print(f"{s.id[:8]} excluded: {args.reason}")
+
+
 def main():
     p = argparse.ArgumentParser(prog="vlt", description="Take your agent traces back.")
     sub = p.add_subparsers(dest="cmd")
@@ -178,12 +184,16 @@ def main():
     sh = sub.add_parser("show", help="show a scrubbed session's replacement table")
     sh.add_argument("id")
     pu = sub.add_parser("push", help="upload scrubbed sessions")
+    pu.add_argument("ids", nargs="*", help="only these sessions (default: every scrubbed one)")
     pu.add_argument("-y", "--yes", action="store_true")
     sub.add_parser("login", help="get a free upload key")
+    ex = sub.add_parser("exclude", help="never upload these sessions")
+    ex.add_argument("ids", nargs="+")
+    ex.add_argument("--reason", default="excluded by user")
     args = p.parse_args()
     if args.cmd in (None, "ls"):
         args.n = getattr(args, "n", 40)
         return cmd_ls(args)
     if args.cmd == "show":
         return show(pick([args.id], list_sessions())[0])
-    {"scrub": cmd_scrub, "push": cmd_push, "login": cmd_login}[args.cmd](args)
+    {"scrub": cmd_scrub, "push": cmd_push, "login": cmd_login, "exclude": cmd_exclude}[args.cmd](args)

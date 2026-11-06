@@ -129,6 +129,8 @@ def _drop(step: dict) -> dict:
 
 def scrub(harness: str, traj: dict, store: Store, log=print) -> dict:
     steps = traj["steps"]
+    if not any(s["source"] == "agent" for s in steps) or not any(s["source"] == "user" for s in steps):
+        return {"excluded": "no agent work"}
     keys = chain_keys(steps)
 
     hits = []

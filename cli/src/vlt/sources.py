@@ -73,7 +73,8 @@ def _claude_steps(path: Path) -> tuple[list[dict], str | None, str]:
                     step.setdefault("observation", {"results": []})["results"].append(
                         {"source_call_id": r["tool_use_id"], "content": _text(r.get("content") or "")})
             text = _text(content)
-            if text and not results:
+            # slash-command wrappers and their local output are harness plumbing, not user turns
+            if text and not results and not text.lstrip().startswith(("<command-", "<local-command-")):
                 steps.append({"source": "user", "message": text, "timestamp": d.get("timestamp")})
                 last_msg_id = None
             continue
