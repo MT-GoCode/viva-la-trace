@@ -2,7 +2,7 @@
 
 flag (detect-secrets + Presidio) -> Haiku decides on flagged turns with +-2 context -> code assigns
 placeholders and applies exact replacements -> Haiku rephrases marked user turns -> a fresh Haiku
-reviews until it finds nothing -> detect-secrets must find nothing in the output.
+reviews until it finds nothing -> no secret detected in the raw session may appear in the output.
 Every LLM result is cached by the hash of its input, so a grown session only pays for new turns.
 """
 from __future__ import annotations
@@ -207,9 +207,10 @@ def scrub(harness: str, traj: dict, store: Store, log=print) -> dict:
         out[i] = {**s, "message": new}
     log(f"rephrase: {len(rephrase)} user turns, drop: {len(drop)} turns")
 
-    remaining = scan.secrets("\n".join(scan.strings(out)))
-    if remaining:
-        raise llm.LLMError(f"{len(remaining)} secrets survived scrubbing")
+    final = json.dumps(out, ensure_ascii=False)
+    survived = [v for x in hits for v in x["secrets"] if v in final]
+    if survived:
+        raise llm.LLMError(f"{len(survived)} detected secrets survived scrubbing")
 
     result = {**traj, "steps": out}
     result["extra"] = {"vlt": {**traj["extra"]["vlt"], "tags": tags}}

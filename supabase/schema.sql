@@ -19,3 +19,4 @@ alter table keys enable row level security;
 alter table traces enable row level security;
 create policy "public read" on traces for select using (true);
 insert into storage.buckets (id, name, public) values ('traces', 'traces', true);
+grant all on public.keys, public.traces to service_role;
